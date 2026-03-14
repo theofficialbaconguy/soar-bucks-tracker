@@ -169,9 +169,12 @@
 
   <div id="student-list"></div>
 
+  <input type="file" id="import-file" class="hidden" accept=".json" onchange="importData(event)">
+
   <div class="reset-section">
-    <button class="btn-danger" style="flex: 2; padding: 14px; font-size: 15px;" onclick="resetAllPoints()">⚠️ Reset Points</button>
-    <button class="btn-secondary" style="flex: 1; padding: 14px; font-size: 15px;" onclick="exportData()">💾 Backup</button>
+    <button class="btn-danger" style="flex: 1; padding: 14px; font-size: 14px;" onclick="resetAllPoints()">⚠️ Reset</button>
+    <button class="btn-secondary" style="flex: 1; padding: 14px; font-size: 14px;" onclick="document.getElementById('import-file').click()">📂 Import</button>
+    <button class="btn-secondary" style="flex: 1; padding: 14px; font-size: 14px;" onclick="exportData()">💾 Backup</button>
   </div>
 </div>
 
@@ -224,8 +227,8 @@
     const time = new Date().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     historyLog.unshift({ name: studentName, action: action, amount: amount, time: time });
     
-    // Keep only the last 50 logs to prevent memory bloat
-    if(historyLog.length > 50) historyLog.pop();
+    // Keep only the last 100 logs to prevent memory bloat
+    if(historyLog.length > 100) historyLog.pop();
     saveData();
   }
 
@@ -273,11 +276,47 @@
   }
 
   function exportData() {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(students));
+    // Package both students and history into one object
+    const backupData = {
+      students: students,
+      history: historyLog
+    };
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData));
     const dlAnchorElem = document.createElement('a');
     dlAnchorElem.setAttribute("href", dataStr);
     dlAnchorElem.setAttribute("download", "soar_bucks_backup.json");
     dlAnchorElem.click();
+  }
+
+  function importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const importedData = JSON.parse(e.target.result);
+        
+        // Handle the new combined format
+        if (importedData.students) {
+          students = importedData.students;
+          historyLog = importedData.history || [];
+        } 
+        // Handle the older format (if you made a backup with the previous code)
+        else if (Array.isArray(importedData)) {
+          students = importedData;
+        }
+
+        saveData();
+        alert("Backup imported successfully!");
+      } catch (err) {
+        alert("Error loading file. Please make sure it is a valid backup JSON file.");
+      }
+    };
+    reader.readAsText(file);
+    
+    // Reset the input so you can import the same file again if needed
+    event.target.value = '';
   }
 
   function openHistory() {
@@ -321,7 +360,6 @@
     const list = document.getElementById('student-list');
     list.innerHTML = ''; 
     
-    // Sort logic: A-Z by default, or Highest Points first if Leaderboard mode is active
     let displayList = [...students];
     if (isLeaderboardMode) {
       displayList.sort((a, b) => b.points - a.points);

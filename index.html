@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Soar Bucks Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #4F46E5;
+    --primary-hover: #4338CA;
+    --success: #10B981;
+    --success-hover: #059669;
+    --danger: #EF4444;
+    --danger-hover: #DC2626;
+    --card-bg: #FFFFFF;
+    --text-main: #1F2937;
+    --text-muted: #6B7280;
+  }
+
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    min-height: 100vh;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 40px 15px;
+    color: var(--text-main);
+  }
+
+  .hidden { display: none !important; }
+
+  .container {
+    background: var(--card-bg);
+    width: 100%;
+    max-width: 500px;
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  }
+
+  h2 {
+    text-align: center;
+    font-weight: 600;
+    margin-top: 0;
+    margin-bottom: 25px;
+  }
+
+  input {
+    width: 100%;
+    padding: 14px;
+    margin-bottom: 15px;
+    border: 2px solid #E5E7EB;
+    border-radius: 10px;
+    font-size: 16px;
+    font-family: inherit;
+    transition: border-color 0.3s ease;
+    box-sizing: border-box;
+  }
+
+  input:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+
+  button {
+    font-family: inherit;
+    font-weight: 600;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.1s ease, background-color 0.2s ease;
+  }
+
+  button:active { transform: scale(0.97); }
+
+  .btn-primary { background: var(--primary); color: white; padding: 14px; width: 100%; font-size: 16px; }
+  .btn-primary:hover { background: var(--primary-hover); }
+
+  .btn-success { background: var(--success); color: white; }
+  .btn-success:hover { background: var(--success-hover); }
+
+  .btn-danger { background: var(--danger); color: white; }
+  .btn-danger:hover { background: var(--danger-hover); }
+
+  .add-student-wrapper {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+  }
+
+  .add-student-wrapper input { margin-bottom: 0; }
+  .add-student-wrapper button { padding: 0 20px; white-space: nowrap; }
+
+  .student-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #F9FAFB;
+    padding: 15px 20px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    border: 1px solid #E5E7EB;
+    transition: box-shadow 0.2s ease;
+  }
+
+  .student-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+
+  .student-info { display: flex; flex-direction: column; }
+  .student-name { font-weight: 600; font-size: 1.1rem; }
+  .remove-text { color: var(--danger); font-size: 0.8rem; cursor: pointer; margin-top: 4px; font-weight: 600; }
+  
+  .controls { display: flex; align-items: center; gap: 15px; }
+  .points-display { font-size: 1.5rem; font-weight: 600; min-width: 35px; text-align: center; }
+  
+  .circle-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.4rem;
+    padding: 0;
+  }
+
+  .reset-section {
+    margin-top: 30px;
+    padding-top: 25px;
+    border-top: 2px solid #E5E7EB;
+  }
+</style>
+</head>
+<body>
+
+<div id="login-screen" class="container">
+  <h2>Enter Passcode</h2>
+  <input type="password" id="passcode-input" placeholder="6-digit passcode" maxlength="6" inputmode="numeric">
+  <button class="btn-primary" onclick="checkPasscode()">Unlock App</button>
+</div>
+
+<div id="app-screen" class="container hidden">
+  <h2>Soar Bucks Tracker</h2>
+  
+  <div class="add-student-wrapper">
+    <input type="text" id="new-student-name" placeholder="Enter student name...">
+    <button class="btn-primary" onclick="addStudent()">Add</button>
+  </div>
+
+  <div id="student-list">
+    </div>
+
+  <div class="reset-section">
+    <button class="btn-danger" style="width: 100%; padding: 14px; font-size: 16px;" onclick="resetAllPoints()">⚠️ Reset All Points</button>
+  </div>
+</div>
+
+<script>
+  const PASSCODE = "121319";
+  let students = JSON.parse(localStorage.getItem('soarBucksStudents')) || [];
+
+  window.onload = () => {
+    if(sessionStorage.getItem('soarBucksAuth') === 'true') { unlockApp(); }
+    
+    document.getElementById('passcode-input').addEventListener('keypress', e => {
+      if (e.key === 'Enter') checkPasscode();
+    });
+    
+    document.getElementById('new-student-name').addEventListener('keypress', e => {
+      if (e.key === 'Enter') addStudent();
+    });
+  };
+
+  function checkPasscode() {
+    if (document.getElementById('passcode-input').value === PASSCODE) {
+      sessionStorage.setItem('soarBucksAuth', 'true');
+      unlockApp();
+    } else {
+      alert("Incorrect passcode.");
+      document.getElementById('passcode-input').value = '';
+    }
+  }
+
+  function unlockApp() {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app-screen').classList.remove('hidden');
+    renderStudents();
+  }
+
+  function saveStudents() {
+    localStorage.setItem('soarBucksStudents', JSON.stringify(students));
+    renderStudents();
+  }
+
+  function addStudent() {
+    const nameInput = document.getElementById('new-student-name');
+    const name = nameInput.value.trim();
+    if (name) {
+      students.push({ id: Date.now(), name: name, points: 0 });
+      nameInput.value = '';
+      saveStudents();
+    }
+  }
+
+  function updatePoints(id, change) {
+    const student = students.find(s => s.id === id);
+    if (student) {
+      student.points += change;
+      saveStudents();
+    }
+  }
+
+  function removeStudent(id) {
+    if(confirm("Remove this student completely?")) {
+      students = students.filter(s => s.id !== id);
+      saveStudents();
+    }
+  }
+
+  function resetAllPoints() {
+    if(confirm("Are you sure you want to reset ALL Soar Bucks to 0?")) {
+      students.forEach(s => s.points = 0);
+      saveStudents();
+    }
+  }
+
+  function renderStudents() {
+    const list = document.getElementById('student-list');
+    list.innerHTML = ''; 
+    
+    const sortedStudents = students.sort((a, b) => a.name.localeCompare(b.name));
+
+    sortedStudents.forEach(student => {
+      const div = document.createElement('div');
+      div.className = 'student-card';
+      
+      div.innerHTML = `
+        <div class="student-info">
+          <span class="student-name">${student.name}</span>
+          <span class="remove-text" onclick="removeStudent(${student.id})">Remove</span>
+        </div>
+        <div class="controls">
+          <button class="btn-danger circle-btn" onclick="updatePoints(${student.id}, -1)">-</button>
+          <span class="points-display">${student.points}</span>
+          <button class="btn-success circle-btn" onclick="updatePoints(${student.id}, 1)">+</button>
+        </div>
+      `;
+      list.appendChild(div);
+    });
+    
+    if (students.length === 0) {
+      list.innerHTML = '<p style="text-align: center; color: #9CA3AF; margin: 30px 0;">No students added yet.</p>';
+    }
+  }
+</script>
+
+</body>
+</html>
